@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="bs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#10131b">
+    <meta name="description" content="RedFlag Guardian — analiza teksta, procjena rizika i pregled pronađenih indikatora.">
+    <title>RedFlag Guardian</title>
+    <style>
+        :root {
+            color-scheme: dark;
+            --bg: #10131b;
+            --panel: #191e29;
+            --panel-2: #202736;
+            --border: #30394b;
+            --text: #f1f4f9;
+            --muted: #a5afc1;
+            --accent: #ff525e;
+            --green: #38d996;
+            --yellow: #ffc857;
+            --red: #ff525e;
+            --radius: 16px;
+        }
+
+        * { box-sizing: border-box; }
+        html { min-height: 100%; -webkit-text-size-adjust: 100%; }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            padding: 20px 14px 36px;
+            background: radial-gradient(ellipse at top, #242a3b 0%, transparent 55%), var(--bg);
+            color: var(--text);
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            line-height: 1.55;
+        }
+
+        .app { width: 100%; max-width: 900px; margin: 0 auto; }
+        header { padding: 12px 2px 24px; }
+        .brand { display: flex; align-items: center; gap: 12px; }
+        .brand-icon {
+            display: grid; place-items: center; width: 48px; height: 48px; flex-shrink: 0;
+            border-radius: 14px; background: rgba(255, 82, 94, 0.13);
+            border: 1px solid rgba(255, 82, 94, 0.35); color: var(--accent); font-size: 26px; font-weight: 800;
+        }
+        h1 { margin: 0; font-size: clamp(23px, 5vw, 32px); line-height: 1.2; letter-spacing: -0.8px; }
+        .subtitle { margin: 5px 0 0; color: var(--muted); font-size: 14px; }
+        .panel {
+            margin-bottom: 18px; padding: clamp(16px, 4vw, 24px);
+            background: rgba(25, 30, 41, 0.96); border: 1px solid var(--border);
+            border-radius: var(--radius); box-shadow: 0 12px 32px rgba(0, 0, 0, 0.13);
+        }
+        h2 { margin: 0 0 7px; font-size: 19px; letter-spacing: -0.3px; }
+        .description { margin: 0 0 17px; color: var(--muted); font-size: 13px; }
+        label { display: block; margin-bottom: 8px; font-size: 14px; font-weight: 650; }
+        textarea {
+            display: block; width: 100%; min-height: 190px; resize: vertical; padding: 14px;
+            border: 1px solid #3a455a; border-radius: 12px; background: #111620;
+            color: var(--text); font: inherit; font-size: 15px; line-height: 1.6; outline: none; overflow-wrap: anywhere;
+        }
+        textarea:focus { border-color: #ff6973; box-shadow: 0 0 0 3px rgba(255, 82, 94, 0.12); }
+        textarea::placeholder { color: #758197; }
+        .input-meta { display: flex; justify-content: space-between; gap: 10px; margin-top: 7px; color: var(--muted); font-size: 12px; }
+        .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+        button {
+            min-height: 46px; padding: 11px 17px; border: 1px solid transparent; border-radius: 11px;
+            font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; touch-action: manipulation;
+            transition: filter 0.15s, transform 0.15s;
+        }
+        button:active { transform: scale(0.98); }
+        button:focus-visible { outline: 3px solid #ff9098; outline-offset: 3px; }
+        button:disabled { cursor: wait; opacity: 0.65; }
+        .primary { flex: 1 1 180px; background: var(--accent); color: #18090c; }
+        .secondary { background: var(--panel-2); color: var(--text); border-color: var(--border); }
+        .primary:hover, .secondary:hover { filter: brightness(1.1); }
+        .message {
+            display: none; margin-bottom: 18px; padding: 14px 16px; border: 1px solid;
+            border-radius: 12px; overflow-wrap: anywhere; font-size: 14px;
+        }
+        .message.error { display: block; color: #ffb5bb; background: rgba(255, 82, 94, 0.09); border-color: rgba(255, 82, 94, 0.5); }
+        .message.info { display: block; color: #c1d9ff; background: rgba(88, 145, 255, 0.09); border-color: rgba(88, 145, 255, 0.4); }
+        .results { display: none; }
+        .results.visible { display: block; }
+        .risk-card { display: flex; align-items: center; gap: 18px; margin-bottom: 18px; }
+        .risk-indicator {
+            display: grid; place-items: center; flex-shrink: 0; width: 82px; height: 82px;
+            border: 3px solid var(--yellow); border-radius: 50%;
+            background: rgba(255, 200, 87, 0.08); color: var(--yellow); font-size: 23px; font-weight: 800;
+        }
+        .risk-indicator.low { color: var(--green); border-color: var(--green); background: rgba(56, 217, 150, 0.08); }
+        .risk-indicator.medium { color: var(--yellow); border-color: var(--yellow); background: rgba(255, 200, 87, 0.08); }
+        .risk-indicator.high { color: var(--red); border-color: var(--red); background: rgba(255, 82, 94, 0.08); }
+        .risk-indicator.unknown { color: var(--muted); border-color: var(--border); background: var(--panel-2); }
+        .risk-title { margin: 0 0 4px; font-size: 20px; font-weight: 750; }
+        .risk-description { margin: 0; color: var(--muted); font-size: 13px; }
+        .section-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 14px; }
+        .count-badge {
+            display: inline-flex; align-items: center; justify-content: center; min-width: 30px;
+            height: 28px; padding: 0 9px; border-radius: 9px; background: var(--panel-2);
+            color: var(--text); font-size: 13px; font-weight: 750;
+        }
+        .category-list, .findings-list { display: grid; gap: 10px; }
+        .category-item {
+            display: flex; justify-content: space-between; align-items: center; gap: 12px;
+            padding: 12px 14px; border: 1px solid var(--border); border-radius: 11px; background: #151a24;
+        }
+        .category-name { min-width: 0; overflow-wrap: anywhere; font-size: 14px; font-weight: 600; }
+        .category-count {
+            display: inline-grid; place-items: center; min-width: 29px; height: 29px;
+            padding: 0 8px; flex-shrink: 0; border-radius: 8px; background: #30394b; font-size: 13px; font-weight: 800;
+        }
+        .finding { padding: 15px; border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 11px; background: #151a24; }
+        .finding-top { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 10px; }
+        .finding-category { color: #ff9ba2; font-size: 13px; font-weight: 750; overflow-wrap: anywhere; }
+        .finding-severity { padding: 3px 8px; border-radius: 6px; background: #30394b; color: #dce4f2; font-size: 11px; font-weight: 750; }
+        blockquote {
+            margin: 0; padding: 10px 12px; border-radius: 8px; background: #202736;
+            color: #e4eaf4; font-size: 14px; white-space: pre-wrap; overflow-wrap: anywhere;
+        }
+        .finding-detail { margin: 10px 0 0; color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
+        .empty-state { padding: 22px 12px; border: 1px dashed var(--border); border-radius: 11px; color: var(--muted); text-align: center; font-size: 14px; }
+        .disclaimer { margin: 18px 2px 0; color: #8490a4; font-size: 12px; text-align: center; }
+        footer { padding: 12px 0; color: #758197; text-align: center; font-size: 12px; }
+        [hidden] { display: none !important; }
+        @media (min-width: 640px) {
+            body { padding: 32px 22px 44px; }
+            .risk-indicator { width: 94px; height: 94px; font-size: 27px; }
+            .findings-list { gap: 12px; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { transition: none !important; scroll-behavior: auto !important; }
+        }
+    </style>
+</head>
+<body>
+    <main class="app">
+        <header>
+            <div class="brand">
+                <div class="brand-icon" aria-hidden="true">!</div>
+                <div>
+                    <h1>RedFlag Guardian</h1>
+                    <p class="subtitle">Analiza teksta i pregled indikatora rizika</p>
+                </div>
+            </div>
+        </header>
+
+        <div id="systemError" class="message error" role="alert" aria-live="assertive" hidden>
+            <strong>Greška: analizator nije učitan.</strong>
+            <p id="systemErrorDetails">
+                Funkcija window.RedFlag.analyze nije dostupna. Provjerite da li je datoteka analyzer.js ispravno učitana.
+            </p>
+        </div>
+
+        <section class="panel" aria-labelledby="inputHeading">
+            <h2 id="inputHeading">Analiza teksta</h2>
+            <p class="description">Unesite tekst koji želite analizirati. Rezultati zavise od dostupnog analizatora.</p>
+
+            <form id="analysisForm">
+                <label for="inputText">Tekst za analizu</label>
+                <textarea id="inputText" name="inputText" placeholder="Zalijepite poruku, razgovor ili drugi tekst ovdje..." autocomplete="off" autocapitalize="sentences" spellcheck="false" required></textarea>
+                <div class="input-meta">
+                    <span>Uneseni tekst</span>
+                    <span id="charCount">0 znakova</span>
+                </div>
+                <div class="actions">
+                    <button class="primary" id="analyzeButton" type="submit">Analiziraj tekst</button>
+                    <button class="secondary" id="clearButton" type="button">Očisti</button>
+                </div>
+            </form>
+        </section>
+
+        <div id="statusMessage" class="message" role="status" aria-live="polite"></div>
+
+        <section id="results" class="results" aria-label="Rezultati analize" aria-live="polite">
+            <div class="panel">
+                <div class="section-heading"><h2>Ukupan nivo rizika</h2></div>
+                <div class="risk-card">
+                    <div id="riskIndicator" class="risk-indicator unknown" aria-label="Nivo rizika nije određen">—</div>
+                    <div>
+                        <p id="riskTitle" class="risk-title">Nije procijenjeno</p>
+                        <p id="riskDescription" class="risk-description">Rezultat će biti prikazan nakon analize.</p>
+                    </div>
+                </div>
+                <p id="riskExplanation" class="description" style="margin-bottom:0"></p>
+            </div>
+
+            <div class="panel">
+                <div class="section-heading">
+                    <h2>Kategorije nalaza</h2>
+                    <span id="categoryTotal" class="count-badge">0</span>
+                </div>
+                <div id="categoryList" class="category-list"></div>
+            </div>
+
+            <div class="panel">
+                <div class="section-heading">
+                    <h2>Pronađeni citati</h2>
+                    <span id="findingTotal" class="count-badge">0</span>
+                </div>
+                <div id="findingsList" class="findings-list"></div>
+            </div>
+
+            <p class="disclaimer">Rezultati su indikatori dobijeni od analizatora, a ne konačna procjena osobe ili situacije.</p>
+        </section>
+
+        <footer>RedFlag Guardian · Samostalni korisnički interfejs</footer>
+    </main>
+
+    <!-- PRVO UČITAVAMO ANALIZATOR -->
+    <script src="analyzer.js"></script>
+    
+    <!-- ZATIM POKREĆEMO GLAVNU SKRIPTU -->
+    <script>
+        "use strict";
+        (() => {
+            const form = document.getElementById("analysisForm");
+            const input = document.getElementById("inputText");
+            const analyzeButton = document.getElementById("analyzeButton");
+            const clearButton = document.getElementById("clearButton");
+            const charCount = document.getElementById("charCount");
+            const systemError = document.getElementById("systemError");
+            const systemErrorDetails = document.getElementById("systemErrorDetails");
+            const statusMessage = document.getElementById("statusMessage");
+            const results = document.getElementById("results");
+            const riskIndicator = document.getElementById("riskIndicator");
+            const riskTitle = document.getElementById("riskTitle");
+            const riskDescription = document.getElementById("riskDescription");
+            const riskExplanation = document.getElementById("riskExplanation");
+            const categoryList = document.getElementById("categoryList");
+            const categoryTotal = document.getElementById("categoryTotal");
+            const findingsList = document.getElementById("findingsList");
+            const findingTotal = document.getElementById("findingTotal");
+
+            function setStatus(message, type = "info") {
+                statusMessage.textContent = message;
+                statusMessage.className = "message " + type;
+                statusMessage.hidden = false;
+            }
+
+            function clearStatus() {
+                statusMessage.textContent = "";
+                statusMessage.className = "message";
+                statusMessage.hidden = true;
+            }
+
+            function showSystemError(details) {
+                systemErrorDetails.textContent = details;
+                systemError.hidden = false;
+            }
+
+            function hideSystemError() {
+                systemError.hidden = true;
+            }
+
+            function getAnalyzer() {
+                if (!window.RedFlag || typeof window.RedFlag.analyze !== "function") {
+                    return null;
+                }
+                return window.RedFlag.analyze;
+            }
+
+            function updateCharacterCount() {
+                const count = input.value.length;
+                charCount.textContent = count.toLocaleString("bs-BA") + (count === 1 ? " znak" : " znakova");
+            }
+
+            function appendTextElement(parent, tagName, className, text) {
+                const element = document.createElement(tagName);
+                if (className) element.className = className;
+                element.textContent = text == null ? "" : String(text);
+                parent.appendChild(element);
+                return element;
+            }
+
+            function firstDefined(object, keys) {
+                if (!object || typeof object !== "object") return undefined;
+                for (const key of keys) {
+                    if (object[key] !== undefined && object[key] !== null) return object[key];
+                }
+                return undefined;
+            }
+
+            function formatRiskLabel(value) {
+                if (value === undefined || value === null || value === "") return "Nije određeno";
+                if (typeof value === "number") return Number.isFinite(value) ? String(value) : "Nije određeno";
+                if (typeof value === "object") {
+                    return String(firstDefined(value, ["label", "level", "name", "score"]) ?? "Nije određeno");
+                }
+                return String(value);
+            }
+
+            function classifyRisk(label, rawValue) {
+                const text = String(label).toLocaleLowerCase("bs");
+                const numeric = typeof rawValue === "number" ? rawValue : NaN;
+                if (/critical|kritič|kritic|very.?high|vrlo visok|extreme|ekstrem/.test(text) || (Number.isFinite(numeric) && numeric >= 80)) {
+                    return { className: "high", title: "Visok rizik", description: "Analizator je označio povišen nivo rizika." };
+                }
+                if (/high|visok|elevated|povišen|povisen/.test(text) || (Number.isFinite(numeric) && numeric >= 60)) {
+                    return { className: "high", title: "Visok rizik", description: "Analizator je označio povišen nivo rizika." };
+                }
+                if (/medium|moderate|srednj|umjeren|umeren/.test(text) || (Number.isFinite(numeric) && numeric >= 30)) {
+                    return { className: "medium", title: "Umjeren rizik", description: "Analizator je označio umjeren nivo rizika." };
+                }
+                if (/low|nizak|minimal|none|nema rizika/.test(text) || (Number.isFinite(numeric) && numeric >= 0 && numeric < 30)) {
+                    return { className: "low", title: "Nizak rizik", description: "Analizator je označio nizak nivo rizika." };
+                }
+                return { className: "unknown", title: "Nivo rizika nije klasifikovan", description: "Prikazana je vrijednost koju je vratio analizator." };
+            }
+
+            function normalizeFindings(rawFindings) {
+                if (rawFindings == null) return [];
+                if (!Array.isArray(rawFindings)) throw new Error("Polje findings mora biti lista nalaza.");
+                return rawFindings.map((finding, index) => {
+                    if (typeof finding === "string") return { category: "Nekategorisano", quote: finding, severity: "", detail: "" };
+                    if (!finding || typeof finding !== "object") throw new Error("Nalaz na poziciji " + (index + 1) + " nije ispravan objekat.");
+                    return {
+                        category: String(firstDefined(finding, ["category", "category_name", "type", "label"]) ?? "Nekategorisano"),
+                        quote: firstDefined(finding, ["quote"]),
+                        severity: firstDefined(finding, ["severity", "level", "risk"]),
+                        detail: firstDefined(finding, ["description", "detail", "explanation", "reason"])
+                    };
+                });
+            }
+
+            function normalizeCategories(rawCategories, findings) {
+                const counts = new Map();
+                if (Array.isArray(rawCategories)) {
+                    rawCategories.forEach((category) => {
+                        if (typeof category === "string") { counts.set(category, 0); return; }
+                        if (category && typeof category === "object") {
+                            const name = firstDefined(category, ["name", "category", "label", "type"]);
+                            const count = firstDefined(category, ["count", "total", "findings_count"]);
+                            if (name !== undefined) {
+                                const numericCount = Number(count);
+                                counts.set(String(name), Number.isFinite(numericCount) && numericCount >= 0 ? numericCount : 0);
+                            }
+                        }
+                    });
+                } else if (rawCategories && typeof rawCategories === "object") {
+                    Object.entries(rawCategories).forEach(([name, value]) => {
+                        const numericCount = Number(typeof value === "object" && value !== null ? firstDefined(value, ["count", "total"]) : value);
+                        counts.set(name, Number.isFinite(numericCount) && numericCount >= 0 ? numericCount : 0);
+                    });
+                }
+                findings.forEach((finding) => {
+                    const category = finding.category;
+                    counts.set(category, (counts.get(category) || 0) + 1);
+                });
+                return Array.from(counts.entries()).map(([name, count]) => ({ name, count }));
+            }
+
+            function renderCategories(categories) {
+                categoryList.replaceChildren();
+                categoryTotal.textContent = String(categories.length);
+                if (categories.length === 0) {
+                    appendTextElement(categoryList, "div", "empty-state", "Analizator nije vratio kategorije.");
+                    return;
+                }
+                categories.forEach((category) => {
+                    const row = document.createElement("div");
+                    row.className = "category-item";
+                    appendTextElement(row, "span", "category-name", category.name);
+                    appendTextElement(row, "span", "category-count", String(category.count));
+                    categoryList.appendChild(row);
+                });
+            }
+
+            function renderFindings(findings) {
+                findingsList.replaceChildren();
+                findingTotal.textContent = String(findings.length);
+                if (findings.length === 0) {
+                    appendTextElement(findingsList, "div", "empty-state", "Nema pronađenih nalaza u rezultatu analizatora.");
+                    return;
+                }
+                findings.forEach((finding, index) => {
+                    const card = document.createElement("article");
+                    card.className = "finding";
+                    const top = document.createElement("div");
+                    top.className = "finding-top";
+                    appendTextElement(top, "span", "finding-category", finding.category);
+                    if (finding.severity !== undefined && finding.severity !== null && String(finding.severity).trim() !== "") {
+                        appendTextElement(top, "span", "finding-severity", String(finding.severity));
+                    }
+                    card.appendChild(top);
+                    appendTextElement(card, "div", "description", "Nalaz " + (index + 1));
+                    const quote = document.createElement("blockquote");
+                    if (finding.quote === undefined || finding.quote === null) {
+                        quote.textContent = "Analizator nije vratio citat za ovaj nalaz.";
+                    } else {
+                        quote.textContent = String(finding.quote);
+                    }
+                    card.appendChild(quote);
+                    if (finding.detail !== undefined && finding.detail !== null && String(finding.detail).trim() !== "") {
+                        appendTextElement(card, "p", "finding-detail", String(finding.detail));
+                    }
+                    findingsList.appendChild(card);
+                });
+            }
+
+            function renderResults(data) {
+                if (!data || typeof data !== "object" || Array.isArray(data)) throw new Error("Analizator nije vratio validan objekat s rezultatima.");
+                const rawFindings = firstDefined(data, ["findings"]);
+                const findings = normalizeFindings(rawFindings);
+                const rawRisk = firstDefined(data, ["overall_risk", "risk_level", "riskScore", "risk_score", "risk", "overallRisk"]);
+                const riskLabel = formatRiskLabel(rawRisk);
+                const risk = classifyRisk(riskLabel, rawRisk);
+                riskIndicator.className = "risk-indicator " + risk.className;
+                riskIndicator.textContent = riskLabel.length > 12 ? riskLabel.slice(0, 12) + "…" : riskLabel;
+                riskIndicator.setAttribute("aria-label", "Ukupan nivo rizika: " + riskLabel);
+                riskTitle.textContent = risk.title;
+                riskDescription.textContent = risk.description;
+                const explanation = firstDefined(data, ["risk_explanation", "riskExplanation", "summary", "overall_summary"]);
+                riskExplanation.textContent = explanation == null ? "" : String(explanation);
+                const rawCategories = firstDefined(data, ["categories", "category_counts", "categoryCounts"]);
+                const categories = normalizeCategories(rawCategories, findings);
+                renderCategories(categories);
+                renderFindings(findings);
+                results.classList.add("visible");
+            }
+
+            input.addEventListener("input", updateCharacterCount);
+
+            form.addEventListener("submit", async (event) => {
+                event.preventDefault();
+                clearStatus();
+                const analyze = getAnalyzer();
+                if (!analyze) {
+                    showSystemError("Funkcija window.RedFlag.analyze nije dostupna. Provjerite da li je analyzer.js učitan, da li se nalazi u istom direktoriju kao index.html i da li sadrži window.RedFlag.analyze(tekst).");
+                    setStatus("Analiza nije moguća jer analizator nije učitan.", "error");
+                    return;
+                }
+                hideSystemError();
+                const text = input.value.trim();
+                if (!text) {
+                    setStatus("Unesite tekst prije pokretanja analize.", "error");
+                    input.focus();
+                    return;
+                }
+                analyzeButton.disabled = true;
+                analyzeButton.textContent = "Analiza u toku…";
+                try {
+                    const response = await Promise.resolve(analyze(text));
+                    if (response === undefined || response === null) throw new Error("Analizator nije vratio rezultate. Provjerite njegov izlazni format.");
+                    renderResults(response);
+                    setStatus("Analiza je završena.", "info");
+                } catch (error) {
+                    results.classList.remove("visible");
+                    const message = error instanceof Error ? error.message : String(error);
+                    setStatus("Greška tokom analize: " + message, "error");
+                } finally {
+                    analyzeButton.disabled = false;
+                    analyzeButton.textContent = "Analiziraj tekst";
+                }
+            });
+
+            clearButton.addEventListener("click", () => {
+                input.value = "";
+                updateCharacterCount();
+                clearStatus();
+                hideSystemError();
+                results.classList.remove("visible");
+                categoryList.replaceChildren();
+                findingsList.replaceChildren();
+                input.focus();
+            });
+
+            updateCharacterCount();
+
+            if (!getAnalyzer()) {
+                showSystemError("Funkcija window.RedFlag.analyze nije dostupna. Provjerite da li je analyzer.js učitan, da li se nalazi u istom direktoriju kao index.html i da li sadrži window.RedFlag.analyze(tekst).");
+            }
+        })();
+    </script>
+</body>
+</html>
